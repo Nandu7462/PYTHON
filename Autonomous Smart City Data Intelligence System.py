@@ -6,13 +6,12 @@ import math
 def generate_data(n):
     data = []
     for i in range(n):
-        record = {
+        data.append({
             "zone": i + 1,
             "traffic": random.randint(0, 100),
             "air_quality": random.randint(0, 300),
             "energy": random.randint(0, 500)
-        }
-        data.append(record)
+        })
     return data
 
 def classify_zone(t, aqi, e):
@@ -35,6 +34,12 @@ def custom_sort(data):
                 data[i], data[j] = data[j], data[i]
     return data
 
+def detect_patterns(df):
+    threshold = 150
+    multi_risk = df[(df["risk_score"] > threshold) & (df["air_quality"] > 150)]
+    stability = np.var(df["traffic"]) < 500
+    return multi_risk, stability
+
 n = random.randint(15, 20)
 data = generate_data(n)
 
@@ -43,14 +48,18 @@ num = int(reg[2:])
 
 if num % 3 == 0:
     random.shuffle(data)
+    method = "Shuffle"
 else:
     data = custom_sort(data)
+    method = "Custom Sort"
 
 for i in range(len(data)):
     t = data[i]["traffic"]
     aqi = data[i]["air_quality"]
     e = data[i]["energy"]
+
     data[i]["category"] = classify_zone(t, aqi, e)
+
     risk = calculate_risk(t, aqi, e)
     data[i]["risk_score"] = risk
     data[i]["risk_sqrt"] = math.sqrt(risk)
@@ -66,7 +75,9 @@ max_risk = df["risk_score"].max()
 avg_risk = df["risk_score"].mean()
 min_risk = df["risk_score"].min()
 
-summary = (max_risk, avg_risk, min_risk)
+summary = (float(max_risk), float(avg_risk), float(min_risk))
+
+multi_risk, stability = detect_patterns(df)
 
 if max_risk > 250:
     decision = "Critical Emergency"
@@ -77,21 +88,28 @@ elif avg_risk > 100:
 else:
     decision = "City Stable"
 
-print("\n--- CITY DATA ---")
+print("\n--- PERSONALIZATION ---")
+print("Register Number:", reg)
+print("Divisible by 3:", num % 3 == 0)
+print("Applied Method:", method)
+
+print("\n--- DATAFRAME ---")
 print(df)
 
 print("\n--- MEAN VALUES ---")
-print("Traffic Mean:", mean_values[0])
-print("Air Quality Mean:", mean_values[1])
-print("Energy Mean:", mean_values[2])
+print("Traffic:", mean_values[0])
+print("Air Quality:", mean_values[1])
+print("Energy:", mean_values[2])
 
 print("\n--- TOP 3 RISK ZONES ---")
 print(top3)
 
 print("\n--- RISK SUMMARY ---")
-print("Max Risk:", float(max_risk))
-print("Average Risk:", float(avg_risk))
-print("Min Risk:", float(min_risk))
+print(summary)
+
+print("\n--- PATTERN DETECTION ---")
+print("High Risk Zones Count:", len(multi_risk))
+print("Stable Traffic:", stability)
 
 print("\n--- FINAL DECISION ---")
 print(decision)
